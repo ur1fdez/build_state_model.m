@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>compare_limits.m</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <style>
+    body {
+      background: #1e1e1e;
+      color: #fff;
+      font-family: sans-serif;
+      padding: 2em;
+    }
+    pre {
+      border-radius: 10px;
+      padding: 1em;
+      overflow-x: auto;
+    }
+    h1 {
+      color: #61dafb;
+    }
+    a {
+      color: #00ffff;
+    }
+  </style>
+</head>
+<body>
+  <h1>compare_limits.m</h1>
+  <p><a href="index.html">← Volver al menú principal</a></p>
+  <pre><code class="language-matlab">
+%% compare_limits.m – genera tabla de métricas clave
+clear;
+load uav_state40_d.mat           % sysd (discreto)
+load mpc_morph.mat               % mpcobj base (±1500 V)
+
+limits = [500 1500];
+results = zeros(numel(limits), 4);   % E [J], t_settle, overshoot, Vmean
+
+for i = 1:numel(limits)
+    % 1) duplica el controlador y cambia saturación
+    mpc_i = mpcobj;
+    for k = 1:4
+        mpc_i.MV(k).Max = limits(i);
+    end
+    % 2) corre la misión 10 s usando run_mission_core
+    [EJ, t_settle, ov, Vmean] = run_mission_core(sysd, mpc_i);
+    results(i,:) = [EJ, t_settle, ov, Vmean];
+end
+
+% ---- mostrar tabla ----
+T = table(limits', ...
+          results(:,1), results(:,1)/3600, ...
+          results(:,2), results(:,3), results(:,4), ...
+          'VariableNames', {'Lim_V', 'E_J', 'E_Wh', ...
+                            'T_settle_s', 'Overshoot_perc', 'Vmean_V'});
+disp(T)
+</code></pre>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+</body>
+</html>

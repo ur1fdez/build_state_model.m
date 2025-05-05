@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>run_mission.m</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <style>
+    body {
+      background: #1e1e1e;
+      color: #fff;
+      font-family: sans-serif;
+      padding: 2em;
+    }
+    pre {
+      border-radius: 10px;
+      padding: 1em;
+      overflow-x: auto;
+    }
+    h1 {
+      color: #61dafb;
+    }
+    a {
+      color: #00ffff;
+    }
+  </style>
+</head>
+<body>
+  <h1>run_mission.m</h1>
+  <p><a href="index.html">← Volver al menú principal</a></p>
+  <pre><code class="language-matlab">
+%% run_mission.m – misión 10 s y energía
+clear;
+load uav_state40_d.mat    % sysd
+load mpc_morph.mat        % mpcobj
+
+Tend = 10;        % s
+Ts   = mpcobj.Ts; % 0.001 s
+N    = Tend/Ts;
+
+% Referencias (deflexión 5 mm, torsión 2 °)
+r = [0.005*ones(N,1)  deg2rad(2)*ones(N,1)];
+
+xplant = zeros(order(sysd),1);
+xmpc   = mpcstate(mpcobj);   % estado del MPC
+u_hist = zeros(N,4);
+y_hist = zeros(N,2);
+
+for k = 1:N
+    yk  = sysd.C*xplant;
+    uk  = mpcmove(mpcobj, xmpc, yk, r(k,:), []);
+    xplant = sysd.A*xplant + sysd.B*uk;
+    u_hist(k,:) = uk';
+    y_hist(k,:) = yk';
+end
+
+%% --- ENERGÍA ---
+C_MFC  = 6.3e-9;
+E_inst = 0.5*C_MFC*sum(u_hist.^2,2);
+t      = (0:N-1)'*Ts;
+E_cum  = cumsum(E_inst);
+Wh     = E_cum(end)/3600;
+fprintf('\nEnergía total: %.2f J   (%.3f Wh)\n', E_cum(end), Wh);
+
+%% --- GRÁFICAS ---
+% 1) Voltaje
+figure;
+plot(t, u_hist);
+xlabel('t [s]'); ylabel('Voltaje [V]'); grid on;
+title('Voltaje aplicado a los 4 actuadores');
+legend('MFC1','MFC2','MFC3','MFC4','Location','eastoutside');
+
+% 2) Respuesta del ala
+figure;
+plot(t, y_hist(:,1)*1e3, 'LineWidth',1.2); hold on;
+plot(t, rad2deg(y_hist(:,2)), 'LineWidth',1.2);
+xlabel('t [s]'); ylabel('w_{tip} [mm]  /  \theta_{tip} [°]'); grid on;
+legend('Deflexión (mm)','Torsión (°)', 'Location','eastoutside');
+title('Respuesta del ala');
+
+% 3) Energía acumulada
+figure;
+plot(t, E_cum, 'LineWidth',1.2);
+xlabel('t [s]'); ylabel('Energía acumulada [J]'); grid on;
+title('Energía acumulada');
+</code></pre>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+</body>
+</html>

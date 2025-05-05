@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>configure_mpc.m</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <style>
+    body {
+      background: #1e1e1e;
+      color: #fff;
+      font-family: sans-serif;
+      padding: 2em;
+    }
+    pre {
+      border-radius: 10px;
+      padding: 1em;
+      overflow-x: auto;
+    }
+    h1 {
+      color: #61dafb;
+    }
+    a {
+      color: #00ffff;
+    }
+  </style>
+</head>
+<body>
+  <h1>configure_mpc.m</h1>
+  <p><a href="index.html">← Volver al menú principal</a></p>
+  <pre><code class="language-matlab">
+%% configure_mpc.m  – actualizado para R2024b
+load uav_state40.mat
+
+% ⚠️  Elimina feed‑through residual
+sysd.D = zeros(size(sysd.C,1), size(sysd.B,2));
+sysd    = ss(sysd.A, sysd.B, sysd.C, sysd.D, sysd.Ts);
+
+% Eliminar feed‑through numérico
+sys_red.D = zeros(size(sys_red.C,1), size(sys_red.B,2));
+sys_red   = ss(sys_red.A, sys_red.B, sys_red.C, sys_red.D);
+
+Ts = 1e-3;  p = 300;  m = 10;
+mpcobj = mpc(sys_red, Ts, p, m);
+
+%% Límites de voltaje por cada MV
+for k = 1:4
+    mpcobj.MV(k).Min = -500;
+    mpcobj.MV(k).Max =  1500;
+end
+
+%% Pesos
+lambdaE = 1e-4;
+mpcobj.Weights.ManipulatedVariables       = lambdaE*ones(1,4);
+mpcobj.Weights.ManipulatedVariablesRate   = 1e-3*ones(1,4);
+mpcobj.Weights.OutputVariables            = [10 10];   % dos salidas
+
+save mpc_morph.mat mpcobj
+fprintf('MPC configurado y guardado.\n');
+</code></pre>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+</body>
+</html>

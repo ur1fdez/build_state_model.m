@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>build_state_model.m</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <style>
+    body {
+      background: #1e1e1e;
+      color: #fff;
+      font-family: sans-serif;
+      padding: 2em;
+    }
+    pre {
+      border-radius: 10px;
+      padding: 1em;
+      overflow-x: auto;
+    }
+    h1 {
+      color: #61dafb;
+    }
+    a {
+      color: #00ffff;
+    }
+  </style>
+</head>
+<body>
+  <h1>build_state_model.m</h1>
+  <p><a href="index.html">← Volver al menú principal</a></p>
+  <pre><code class="language-matlab">
+%% build_state_model.m  (versión corregida)
+load wing_MK.mat          % K, M 80x80
+load Bu_actuators.mat     % Bu 80x4
+
+n = size(M,1);
+Z = sparse(n,n);
+
+zeta = 1e-2;                       % 1 % de amortiguamiento crítico aprox.
+A = [Z speye(n);
+     -M\K  -zeta*speye(n)];        % <‑‑ parte real negativa
+
+B = [sparse(n,4);  M\Bu];
+
+C = [zeros(1,n) 1 zeros(1,n-1);
+     zeros(1,n) 0 1 zeros(1,n-2)];
+D = zeros(2,4);
+
+sys_full = ss(A,B,C,D);
+
+[sys_red,~] = balred(sys_full,40,'StateElimMethod','MatchDC');
+save uav_state40.mat sys_red
+fprintf('Modelo reducido guardado: %d estados.\n', order(sys_red));</code></pre>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+</body>
+</html>
